@@ -29,10 +29,15 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
+
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
-});
 
-// Rotas criadas para o teste
-Route::get('/csv', [\App\Http\Controllers\CsvController::class, "index"])->name("csv");
+    Route::controller(\App\Http\Controllers\CsvImportController::class)->group(function(){
+        // Rotas criadas para o teste
+        Route::get('/csv', "index")->name("csv");
+        Route::post('/csv', "store")->name("csvpost");
+    });
+
+});
