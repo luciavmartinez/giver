@@ -25,59 +25,69 @@
                                     Processar
                                 </button>
 
-                                <button @click.prevent="render">
-                                    RENDER
-                                </button>
                             </form>
                         </div>
 
                         <div class="text-sky-900 font-bold mt-4" v-if="$page.props.flash && $page.props.flash.message">{{ $page.props.flash.message }}</div>
                     </div>
 
-                </div>
-            </div>
+                    <div v-if="props.users && props.users.total > 0">
+                        <Pagination :links="props.users.links" class="mt-6" />
+                        <table class="border-collapse border border-slate-400 m-auto mt-12 w-full">
+                            <thead>
+                                <th class="border border-slate-300 p-1">Title</th>
+                                <th class="border border-slate-300 p-1">Name</th>
+                                <th class="border border-slate-300 p-1">Company</th>
+                                <th class="border border-slate-300 p-1">Email</th>
+                                <th class="border border-slate-300 p-1">City</th>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(user, index) in props.users.data" :key="index">
+                                    <td class="border border-slate-300 px-2">{{ user.title }}</td>
+                                    <td class="border border-slate-300 px-2">{{ user.first_name + ' ' + user.last_name }}</td>
+                                    <td class="border border-slate-300 px-2">{{ user.company }}</td>
+                                    <td class="border border-slate-300 px-2">{{ user.email }}</td>
+                                    <td class="border border-slate-300 px-2">{{ user.city }}</td>
+                                </tr>
+                            </tbody>
 
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="p-4 bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                    <div style="width: 300px; margin: 0 auto">
-                        <Bar
-                            v-if="isRendered"
-                            :chart-options="chartOptions"
-                            :chart-data="chartSobrenomeData"
-                            :width="300"
-                            :height="300"
-                        />
+                        </table>
                     </div>
-                </div>
-            </div>
 
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="p-4 bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                    <div style="width: 300px; margin: 0 auto">
-                        <Bar
-                            v-if="isRendered"
-                            :chart-options="chartOptions"
-                            :chart-data="chartEmailData"
-                            :width="300"
-                            :height="300"
-                        />
+                    <div id="container-graficos" class="mt-12">
+
+                        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+                            <Bar
+                                v-if="isRendered"
+                                :chart-options="chartOptions"
+                                :chart-data="chartSobrenomeData"
+                                :width="300"
+                                :height="300"
+                            />
+                        </div>
+
+                        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+                            <Doughnut
+                                v-if="isRendered"
+                                :chart-options="donutsOptions"
+                                :chart-data="donutsMailData"
+                                :width="300"
+                                :height="300"
+                            />
+                        </div>
+
+                        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+                            <Bar
+                                v-if="isRendered"
+                                :chart-options="chartOptions"
+                                :chart-data="chartGeneroData"
+                                :width="300"
+                                :height="300"
+                            />
+                        </div>
+
                     </div>
-                </div>
-            </div>
 
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="p-4 bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                    <div style="width: 300px; margin: 0 auto">
-
-                        <Bar
-                            v-if="isRendered"
-                            :chart-options="chartOptions"
-                            :chart-data="chartGeneroData"
-                            :width="300"
-                            :height="300"
-                        />
-
-                    </div>
                 </div>
             </div>
 
@@ -85,28 +95,66 @@
     </AppLayout>
 </template>
 
+<style>
+
+#container-graficos{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+#container-graficos canvas{
+    flex: fit-content;
+}
+
+</style>
+
 <script setup>
 
+import Pagination from '@/Shared/Pagination.vue';
+import { Inertia } from '@inertiajs/inertia'
 import {reactive, ref, onMounted} from 'vue';
 import { useForm } from '@inertiajs/inertia-vue3'
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Bar } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
+import { Bar, Doughnut } from 'vue-chartjs'
+import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
 
 const form = useForm({
     file: null,
 })
+
+const donutsMailData = ref({
+    labels: ['Com email', 'Sem email'],
+    datasets: [
+        {
+            backgroundColor: ['#41B883', '#E46651'],
+            data: [40, 20]
+        }
+    ]
+})
+
+const donutsOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: 50,
+    rotation: 120
+}
 
 function submit() {
     form.post('/csv', {
         onSuccess: () => {
             form.reset('name');
 
+            Inertia.reload({ only: ['emailsInvalidos', 'emailsValidos', 'generos', 'sobrenomes', 'users'] })
         },
     })
 }
+
+Inertia.on('success', (event) => {
+    renderGraphics()
+})
 
 let isRendered = ref(false);
 
@@ -121,25 +169,10 @@ const graphicBarColors = {
     ]
 }
 
-function updateSobrenome(values){
-    chartSobrenomeData.value.datasets[0].data = values;
-}
-
 function render(){
     isRendered.value = false;
     isRendered.value = true;
 }
-
-const chartEmailData = ref({
-    labels: ['Com email', 'Sem email'],
-    datasets: [{
-        label: 'Emails',
-        data: [0,0],
-        backgroundColor: graphicBarColors.backgroundColor,
-        borderColor: graphicBarColors.borderColor,
-        borderWidth: 1
-    }]
-})
 
 const chartGeneroData = ref({
     labels: ['Preenchidos', 'Vazios'],
@@ -164,6 +197,7 @@ const chartSobrenomeData = ref({
 })
 
 const chartOptions = {
+    minBarLength: 50,
     responsive: true,
     scales: {
         y: {
@@ -173,12 +207,17 @@ const chartOptions = {
 }
 
 function renderGraphics(){
-
     // Fill email data
-    chartEmailData.value.datasets[0].data = [props.emailsValidos, props.emailsInvalidos]
+    if(props && props.emailsValidos && props.sobrenomes) {
+        donutsMailData.value.datasets[0].data = [props.emailsValidos, props.emailsInvalidos]
+        chartSobrenomeData.value.datasets[0].data = [props.sobrenomes[0].total, props.sobrenomes[1].total]
+        chartGeneroData.value.datasets[0].data = [props.generos[0].total, props.generos[1].total]
+        isRendered.value = true;
+    }
 }
 
 let props = defineProps({
+    users: Object,
     sobrenomes: Object,
     generos: Object,
     emailsValidos: Number,

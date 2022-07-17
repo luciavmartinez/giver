@@ -20,8 +20,9 @@ class CsvImportController extends Controller
             'sobrenomes' => CsvImport::emptyLastNamesResume()->get(),
             'generos' => CsvImport::emptyGendersResume()->get(),
             'emailsValidos' => CsvImport::getWithvalidEmails()->count(),
-            'emailsInvalidos' => CsvImport::getWithInvalidEmails()->count()]
-        );
+            'emailsInvalidos' => CsvImport::getWithInvalidEmails()->count(),
+            'users' =>  CsvImport::query()->paginate(10)
+        ]);
     }
 
     /**
@@ -69,10 +70,11 @@ class CsvImportController extends Controller
      * @param array $info
      * @return \Inertia\Response
      */
-    private function response(string $message = "Erro inesperado", array $info = [])
+    private function response(string $message = "Erro inesperado", array $info = [], $status = 'success')
     {
         return Inertia::render('CsvEditor', [
             "flash" => [
+                "status" => $status,
                 "message" => $message,
                 "info" => $info
             ]
